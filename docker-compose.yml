@@ -113,11 +113,11 @@ services:
       KAFKA_CLUSTERS_0_METRICS_PORT: 9092
       DYNAMIC_CONFIG_ENABLED: 'true'
 
-  # ms-spring-kafka-monitor-prevention
+# ms-spring-kafka-monitor-prevention
   spring-kafka:
     image: ms-spring-kafka-monitor-prevention:1.0.0
     hostname: spring-kafka
-    container_name: ms-spring-kafka
+    container_name: ms-spring-kafka-monitor-prevention
     ports:
       - "8090:8090"
     depends_on:
@@ -125,4 +125,18 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8090
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:9092
+
+# ms-spring-kafka-streams-monitor-prevention
+  spring-kafka-streams:
+    image: ms-spring-kafka-streams-monitor-prevention:1.0.0
+    hostname: spring-kafka-streams
+    container_name: ms-spring-kafka-streams-monitor-prevention
+    ports:
+      - "8091:8091"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8091
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:9092
