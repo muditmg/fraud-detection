@@ -1,0 +1,128 @@
+---
+services:
+# Init Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "22181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: nc -z localhost 2181 || exit -1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - ./zoo1/data:/data
+      - ./zoo1/datalog:/datalog
+
+# Init Cluster Kafka 1
+  kafka1:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka1
+    container_name: kafka1
+    ports:
+      - "8097:8097"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:8097,INTERNAL://kafka1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_MESSAGE_MAX_BYTES: 100001200
+    healthcheck:
+      test: nc -z localhost 8097 || exit -1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - ./kafka1/data:/var/lib/kafka/data
+      - ./kafka1/log:/var/log/kafka
+
+# Init Cluster Kafka 2
+  kafka2:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka2
+    container_name: kafka2
+    ports:
+      - "8098:8098"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:8098,INTERNAL://kafka2:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_MESSAGE_MAX_BYTES: 100001200
+    healthcheck:
+      test: nc -z localhost 8098 || exit -1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - ./kafka2/data:/var/lib/kafka/data
+      - ./kafka2/log:/var/log/kafka
+
+# Init Command : Create Topic
+  init-kafka:
+    image: confluentinc/cp-kafka:latest
+    hostname: init
+    container_name: init
+    depends_on:
+      kafka1:
+        condition: service_healthy
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server kafka1:9092 --list
+      echo -e 'Creating kafka topics'
+      kafka-topics --create --if-not-exists --topic input-monitor-trx-stream-topic --bootstrap-server kafka1:9092 --partitions 1 --replication-factor 1
+      kafka-topics --create --if-not-exists --topic output-monitor-trx-stream-topic --bootstrap-server kafka1:9092 --partitions 1 --replication-factor 1
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka1:9092 --list
+      "
+
+ # UI for Apache Kafka | UI for visualizing Kafka clusters, topics, partitions, etc...
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: localhost
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+
+  # ms-spring-kafka-monitor-prevention
+  spring-kafka:
+    image: ms-spring-kafka-monitor-prevention:1.0.0
+    hostname: spring-kafka
+    container_name: ms-spring-kafka
+    ports:
+      - "8090:8090"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8090
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka1:9092
