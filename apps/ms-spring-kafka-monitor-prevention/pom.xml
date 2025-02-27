@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -8,13 +8,13 @@
 		<version>3.2.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.zomeli.spring.kafka</groupId>
+	<groupId>com.mudit.spring.kafka</groupId>
 	<artifactId>ms-spring-kafka-monitor-prevention</artifactId>
 	<version>1.0.0</version>
 	<name>ms-spring-kafka-monitor-prevention</name>
 	<description>ms-spring-kafka-monitor-prevention</description>
 	<properties>
-		<java.version>17</java.version>
+		<java.version>21</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -23,7 +23,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webflux</artifactId>
+			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.kafka</groupId>
@@ -58,25 +58,27 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>3.2.4</version>
 				<executions>
 					<execution>
+						<id>build-image</id>
 						<goals>
 							<goal>build-image</goal>
 						</goals>
+						<configuration>
+							<skip>true</skip>
+						</configuration>
 					</execution>
 				</executions>
 				<configuration>
-<!--					<imageName>${project.name}:${project.version}</imageName>-->
 					<image>
 						<name>${project.name}:${project.version}</name>
 						<env>
 							<BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
 						</env>
 					</image>
-<!--					<pullPolicy>IF_NOT_PRESENT</pullPolicy>-->
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
